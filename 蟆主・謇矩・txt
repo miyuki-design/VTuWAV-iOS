@@ -1,33 +1,89 @@
-VTuWAV v0.2: iPhone内へ動画・音声をダウンロードする機能（実装案）
+VTuWAV v0.3 — 動画視聴ページURL → iPhone内MP4保存 → WAV変換
+2026-10-22 / 実装パッチ（Xcode実機ビルドは未検証）
 
-【追加するファイル】
-VTuWAV/DownloadStore.swift
-VTuWAV/InAppBrowserView.swift
-VTuWAV/MainTabView.swift
+■ 追加機能
+YouTube等の動画視聴ページURLを開き、「このページの動画を保存」を押すと、
+自分のOracle Cloudなどのサーバーで yt-dlp が動画を取得してMP4を用意。
+iPhoneアプリがMP4を受信して「このiPhone内 / VTuWAV / Downloads」に保存します。
+保存後はライブラリから再生／共有／既存のWAV変換ができます。
 
-【変更するファイル】
-VTuWAV/VTuWAVApp.swift（このZIP内の完成版で差し替え可能）
-もしくは既存VTuWAVApp.swiftの「ContentView()」1箇所だけ「MainTabView()」に変更。
+■ 重要な前提
+・サイトのダウンロード条件・著作権を守り、本人の投稿または保存許諾を得た動画だけを対象にしてください。
+・非公開アプリでもYouTube等の利用規約の制限はなくなりません。
+・DRMを解除する機能、会員限定コンテンツの回避機能、YouTube Premiumの保存ファイル取り出し機能はありません。
+・YouTube側の仕様変更、PO Token要件、403応答、動画の地域制限・形式により取得できない動画があります。
+・iPhone単独でYouTubeを解析する方式ではありません。Oracle Cloudなどのサーバーが必要です。
+・YouTube等の閲覧画面を開くだけではダウンロードされません。保存ボタンを押したときだけ実行します。
 
-【GitHub上での手順】
-1. ZIPを展開。
-2. github.com/miyuki-design/VTuWAV-iOS を開く。
-3. VTuWAVフォルダを開く → Add file → Upload files。
-4. 新しいSwiftファイル3つ（DownloadStore.swift、InAppBrowserView.swift、MainTabView.swift）をアップロードしコミット。
-5. 既存の VTuWAVApp.swift を開いて鉛筆ボタンを押し、ContentView()をMainTabView()へ変更、コミット。
-6. Actions → VTuWAV iOS to TestFlight → Run workflow。実機で動作確認。
+■ GitHub（既存VTuWAV-iOSのmainに追加）
+リポジトリ: https://github.com/miyuki-design/VTuWAV-iOS
+新規追加: VTuWAV/PageVideoDownloader.swift
+v0.2を未導入の場合は、以下も追加:
+  VTuWAV/DownloadStore.swift
+  VTuWAV/InAppBrowserView.swift
+  VTuWAV/MainTabView.swift
+※v0.2導入済みでも InAppBrowserView.swift はこのv0.3版で上書き。
+VTuWAV/VTuWAVApp.swift をこのZIPの内容で置換するか、
+  WindowGroup { ContentView() }
+を
+  WindowGroup { MainTabView() }
+に変更。
+他のファイル、特に WAVConverter.swift / ContentView.swift / project.yml / GitHub Actions は変更不要。
 
-【何ができるか】
-・ブラウザからサイトが提供する正規のダウンロードリンクを利用して動画・音声を保存（ダウンロード可能なファイルに限る）。
-・MP4/MOVなど、動画ファイルそのものの直接URLを「動画URLを保存」ボタンで保存。
-・保存先は「ファイル」→「このiPhone内」→「VTuWAV」→「Downloads」。
-・ライブラリから再生・共有・削除、動画からWAV変換。
-・既存の「WAV変換」タブも残る。
+GitHubブラウザ: VTuWAVフォルダ → Add file → Upload files → コミット。
+上書きできない画面では既存ファイルを開いて編集ボタンで貼り替え。
+Actions → VTuWAV iOS to TestFlight → Run workflow。
 
-【制限】
-・YouTube等の視聴ページURLから動画ストリームを解析して取得する機能ではない。
-・DRM保護、アクセス制御、サービス側のダウンロード制限の回避はしない。
-・配信元の許可が必要な場合はそれに従う。
-・WebM/MKV等は保存できてもiOSの再生・WAV変換が対応しない場合がある。
-・端末内でのダウンロードが終わるまでアプリを前面に置くこと（バックグラウンド再開未実装）。
-・Swift構文検証済み。Xcode実ビルド・iPhone実機動作は未検証。
+■ Oracle Cloud（既存のLinuxサーバーを使う例）
+下の「server」フォルダをサーバーへ転送。コマンド例:
+  cd server
+  python3 -m venv .venv
+  source .venv/bin/activate
+  python3 -m pip install -r requirements.txt
+  ffmpeg -version
+  deno --version
+
+※ ffmpeg が無ければOSに合った方法で別途導入してください。
+※ 2026年のYouTube動画取得にはJavaScriptチャレンジの処理が必要です。
+   Deno 2.3以上を追加インストールしてください（yt-dlpが自動使用）。
+   参照: https://github.com/yt-dlp/yt-dlp/wiki/EJS
+※ インターネットからHTTPSでアクセス可能にするには既存の cloudflared を使えます。
+※ サーバーの公開ポートを直接開ける必要はありません。
+
+起動コマンド例（安全のためローカルホストだけで待ち受け）:
+  export VTUWAV_API_KEY='自分で決める十分長いキー'
+  export VTUWAV_HOST=127.0.0.1
+  export VTUWAV_PORT=8787
+  python3 vtuwav_server.py
+
+別ターミナルで動作確認（サーバー側から）:
+  curl http://127.0.0.1:8787/health
+応答例: {"ok": true}
+
+既存のCloudflare TunnelにHTTPS公開ホストを割り当て、
+公開アドレスが  https://vtuwav.example.com  だとすると
+VTuWAVのブラウザタブ → 設定 → サーバーURLにそのアドレス、
+アクセスキーにVTUWAV_API_KEYと同じ文字列を入力します。
+
+一時的なテストなら、別ターミナルで:
+  cloudflared tunnel --url http://127.0.0.1:8787
+として表示された https://xxxx.trycloudflare.com を入力できます。
+（このURLは恒久的ではなく、Cloudflare Tunnelが停止すると使えません。）
+
+■ iPhoneでの使い方
+1. VTuWAVを開く →「ダウンロード」タブ。
+2. 「設定」からHTTPSサーバーURLとアクセスキーを入力（初回だけ）。
+3. 自分が保存できる動画のページ（YouTubeなど）のURLを開く。
+4. 「このページの動画を保存」を押す。
+5. サーバーの処理完了後、端末へMP4をコピー。
+6. 「ライブラリ」から再生またはWAV変換。
+
+■ 現時点の制限
+・対象ドメイン: youtube.com, youtu.be, youtube-nocookie.com, vimeo.com, nicovideo.jp, nico.ms
+  対象は必要に応じてserver/vtuwav_server.pyのALLOWED_DOMAINSで追加可能。
+・配信元の仕様変更や認証要件で成功しないことがあります。YouTubeの全動画を保証するものではありません。
+・サーバー側で同時実行1件。最大ファイルサイズ目安1GB、最大1080p MP4系フォーマットを優先。
+・iPhoneのアプリ内では動画の取得中に画面を閉じないでください。現段階は中断再開未対応。
+・準備した動画はサーバー側に約1時間保管し、後のAPIアクセス時に古いものを削除します。
+・VTuWAVのサーバー保存機能はHTTPSを前提としています。APIキーは共有しないでください。
+・Swift構文チェック、Python構文チェック、模擬サーバー通信テスト済み。Xcode／実機／YouTubeからの取得は未検証。
