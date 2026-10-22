@@ -1,0 +1,33 @@
+VTuWAV v0.2: iPhone内へ動画・音声をダウンロードする機能（実装案）
+
+【追加するファイル】
+VTuWAV/DownloadStore.swift
+VTuWAV/InAppBrowserView.swift
+VTuWAV/MainTabView.swift
+
+【変更するファイル】
+VTuWAV/VTuWAVApp.swift（このZIP内の完成版で差し替え可能）
+もしくは既存VTuWAVApp.swiftの「ContentView()」1箇所だけ「MainTabView()」に変更。
+
+【GitHub上での手順】
+1. ZIPを展開。
+2. github.com/miyuki-design/VTuWAV-iOS を開く。
+3. VTuWAVフォルダを開く → Add file → Upload files。
+4. 新しいSwiftファイル3つ（DownloadStore.swift、InAppBrowserView.swift、MainTabView.swift）をアップロードしコミット。
+5. 既存の VTuWAVApp.swift を開いて鉛筆ボタンを押し、ContentView()をMainTabView()へ変更、コミット。
+6. Actions → VTuWAV iOS to TestFlight → Run workflow。実機で動作確認。
+
+【何ができるか】
+・ブラウザからサイトが提供する正規のダウンロードリンクを利用して動画・音声を保存（ダウンロード可能なファイルに限る）。
+・MP4/MOVなど、動画ファイルそのものの直接URLを「動画URLを保存」ボタンで保存。
+・保存先は「ファイル」→「このiPhone内」→「VTuWAV」→「Downloads」。
+・ライブラリから再生・共有・削除、動画からWAV変換。
+・既存の「WAV変換」タブも残る。
+
+【制限】
+・YouTube等の視聴ページURLから動画ストリームを解析して取得する機能ではない。
+・DRM保護、アクセス制御、サービス側のダウンロード制限の回避はしない。
+・配信元の許可が必要な場合はそれに従う。
+・WebM/MKV等は保存できてもiOSの再生・WAV変換が対応しない場合がある。
+・端末内でのダウンロードが終わるまでアプリを前面に置くこと（バックグラウンド再開未実装）。
+・Swift構文検証済み。Xcode実ビルド・iPhone実機動作は未検証。
