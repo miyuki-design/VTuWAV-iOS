@@ -21,6 +21,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.miminoz.vtuwav
         PRODUCT_NAME: VTuWAV
+        TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: VTuWAV
         INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: "YES"
