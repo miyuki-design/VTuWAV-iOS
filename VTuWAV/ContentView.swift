@@ -14,9 +14,10 @@ struct ContentView: View {
     private let accent = Color(red: 0.52, green: 0.86, blue: 0.94)
 
     var body: some View {
-        ZStack {
-            background.ignoresSafeArea()
-            ScrollView {
+        GeometryReader { proxy in
+            ZStack {
+                background.ignoresSafeArea()
+                ScrollView {
                 VStack(alignment: .leading, spacing: 23) {
                     HStack(spacing: 15) {
                         Image(systemName: "waveform.path")
@@ -110,8 +111,9 @@ struct ContentView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(22)
-                .frame(maxWidth: 620)
                 .frame(maxWidth: .infinity)
+                .frame(minHeight: proxy.size.height, alignment: .top)
+                }
             }
         }
         .foregroundStyle(.white)
