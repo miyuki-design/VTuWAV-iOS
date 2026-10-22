@@ -4,7 +4,7 @@ import SwiftUI
 struct VTuWAVApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MainTabView()
         }
     }
 }
