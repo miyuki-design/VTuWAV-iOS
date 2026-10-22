@@ -5,6 +5,10 @@ struct InAppBrowserView: View {
     @ObservedObject var store: DownloadStore
     @StateObject private var browser = BrowserController()
     @State private var address = ""
+    @StateObject private var pageDownloader = PageVideoDownloader()
+    @AppStorage("vtuwav.serverAddress") private var serverAddress = ""
+    @AppStorage("vtuwav.accessKey") private var accessKey = ""
+    @State private var showServerSettings = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -27,16 +31,47 @@ struct InAppBrowserView: View {
                     .disabled(!browser.canGoForward)
                 Button { browser.reload() } label: { Image(systemName: "arrow.clockwise") }
                 Spacer()
-                if store.isDownloading { ProgressView() }
+                if store.isDownloading || pageDownloader.isWorking { ProgressView() }
                 Button {
-                    Task { await store.downloadDirect(browser.webView.url?.absoluteString ?? address) }
+                    showServerSettings = true
                 } label: {
-                    Label("動画URLを保存", systemImage: "arrow.down.to.line")
+                    Label("設定", systemImage: "gearshape")
                 }
-                .disabled(store.isDownloading)
             }
             .buttonStyle(.bordered)
             .padding(.horizontal)
+
+            HStack(spacing: 8) {
+                Button {
+                    let page = browser.webView.url?.absoluteString ?? address
+                    Task {
+                        await pageDownloader.download(pageAddress: page,
+                                                      serverAddress: serverAddress,
+                                                      accessKey: accessKey, store: store)
+                    }
+                } label: {
+                    Label("このページの動画を保存", systemImage: "arrow.down.to.line.compact")
+                        .frame(maxWidth: .infinity)
+                }
+                .disabled(pageDownloader.isWorking || store.isDownloading)
+                Button {
+                    Task { await store.downloadDirect(browser.webView.url?.absoluteString ?? address) }
+                } label: {
+                    Text("直接URL")
+                }
+                .disabled(pageDownloader.isWorking || store.isDownloading)
+            }
+            .buttonStyle(.borderedProminent)
+            .padding(.horizontal)
+
+            if !pageDownloader.message.isEmpty {
+                Text(pageDownloader.message)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if !store.message.isEmpty {
                 Text(store.message)
@@ -50,7 +85,7 @@ struct InAppBrowserView: View {
             BrowserHost(webView: browser.webView)
                 .background(.white)
 
-            Text("サイトの正規ダウンロードボタンにも対応。『動画URLを保存』は動画ファイルの直接URL専用です。DRM保護やサイトの制限は解除しません。")
+            Text("動画視聴ページからの保存には、個人用サーバーの設定が必要です。権利者の許可のある動画のみ保存してください。DRMは解除しません。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)
@@ -58,6 +93,25 @@ struct InAppBrowserView: View {
         }
         .navigationTitle("ブラウザ")
         .onAppear { browser.store = store }
+        .sheet(isPresented: $showServerSettings) {
+            NavigationStack {
+                Form {
+                    Section("動画取得サーバー") {
+                        TextField("https://サーバーの公開URL", text: $serverAddress)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        SecureField("アクセスキー", text: $accessKey)
+                    }
+                    Section {
+                        Text("YouTube等の動画ページの解析はiPhoneだけでは行わず、yt-dlpを動かす自分のサーバーが担当します。HTTPSで接続できるアドレスを入力してください。")
+                            .font(.footnote)
+                    }
+                }
+                .navigationTitle("サーバー設定")
+                .toolbar { Button("完了") { showServerSettings = false } }
+            }
+        }
         .onReceive(browser.$currentAddress) { address = $0 }
         .alert("ブラウザ", isPresented: Binding(
             get: { browser.errorMessage != nil },
