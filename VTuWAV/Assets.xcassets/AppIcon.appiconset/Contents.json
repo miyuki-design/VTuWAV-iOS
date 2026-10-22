@@ -1,1 +1,116 @@
-
+{
+  "images": [
+    {
+      "filename": "iphone_20x20_2x.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "20x20"
+    },
+    {
+      "filename": "iphone_20x20_3x.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "20x20"
+    },
+    {
+      "filename": "iphone_29x29_2x.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "29x29"
+    },
+    {
+      "filename": "iphone_29x29_3x.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "29x29"
+    },
+    {
+      "filename": "iphone_40x40_2x.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "40x40"
+    },
+    {
+      "filename": "iphone_40x40_3x.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "40x40"
+    },
+    {
+      "filename": "iphone_60x60_2x.png",
+      "idiom": "iphone",
+      "scale": "2x",
+      "size": "60x60"
+    },
+    {
+      "filename": "iphone_60x60_3x.png",
+      "idiom": "iphone",
+      "scale": "3x",
+      "size": "60x60"
+    },
+    {
+      "filename": "ipad_20x20_1x.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "20x20"
+    },
+    {
+      "filename": "ipad_20x20_2x.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "20x20"
+    },
+    {
+      "filename": "ipad_29x29_1x.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "29x29"
+    },
+    {
+      "filename": "ipad_29x29_2x.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "29x29"
+    },
+    {
+      "filename": "ipad_40x40_1x.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "40x40"
+    },
+    {
+      "filename": "ipad_40x40_2x.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "40x40"
+    },
+    {
+      "filename": "ipad_76x76_1x.png",
+      "idiom": "ipad",
+      "scale": "1x",
+      "size": "76x76"
+    },
+    {
+      "filename": "ipad_76x76_2x.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "76x76"
+    },
+    {
+      "filename": "ipad_83p5x83p5_2x.png",
+      "idiom": "ipad",
+      "scale": "2x",
+      "size": "83.5x83.5"
+    },
+    {
+      "filename": "AppIcon1024.png",
+      "idiom": "ios-marketing",
+      "scale": "1x",
+      "size": "1024x1024"
+    }
+  ],
+  "info": {
+    "author": "xcode",
+    "version": 1
+  }
+}
