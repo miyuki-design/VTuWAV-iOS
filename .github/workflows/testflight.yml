@@ -1,1 +1,118 @@
+name: VTuWAV iOS to TestFlight
 
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      APP_BUNDLE_ID: dev.miminoz.vtuwav
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      APPSTORE_ISSUER_ID: ${{ vars.APPSTORE_ISSUER_ID }}
+      APPSTORE_API_KEY_ID: ${{ vars.APPSTORE_API_KEY_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26.3
+        run: |
+          if [ -d /Applications/Xcode_26.3.app ]; then
+            sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          fi
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec project.yml
+
+      - name: Verify signing variables
+        run: |
+          test -n "$APPLE_TEAM_ID" || { echo 'Missing variable APPLE_TEAM_ID'; exit 1; }
+          test -n "$APPSTORE_ISSUER_ID" || { echo 'Missing variable APPSTORE_ISSUER_ID'; exit 1; }
+          test -n "$APPSTORE_API_KEY_ID" || { echo 'Missing variable APPSTORE_API_KEY_ID'; exit 1; }
+
+      - name: Install Apple signing certificate and provisioning profile
+        env:
+          CERT_BASE64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          PROFILE_BASE64: ${{ secrets.IOS_APPSTORE_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          test -n "$CERT_BASE64" || { echo 'Missing certificate secret'; exit 1; }
+          test -n "$PROFILE_BASE64" || { echo 'Missing profile secret'; exit 1; }
+          TEMP="$RUNNER_TEMP"
+          KEYCHAIN="$TEMP/app-signing.keychain-db"
+          KEYCHAIN_PASSWORD="temporary-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          printf %s "$CERT_BASE64" | base64 -D > "$TEMP/distribution.p12"
+          printf %s "$PROFILE_BASE64" | base64 -D > "$TEMP/app.mobileprovision"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$TEMP/distribution.p12" -k "$KEYCHAIN" -P "$CERT_PASSWORD" -A -t cert -f pkcs12
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" login.keychain-db
+          security default-keychain -d user -s "$KEYCHAIN"
+
+          security cms -D -i "$TEMP/app.mobileprovision" > "$TEMP/profile.plist"
+          PROFILE_UUID=$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$TEMP/profile.plist")
+          PROFILE_NAME=$(/usr/libexec/PlistBuddy -c 'Print :Name' "$TEMP/profile.plist")
+          PROFILE_APP_ID=$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$TEMP/profile.plist")
+          if [ "$PROFILE_APP_ID" != "$APPLE_TEAM_ID.$APP_BUNDLE_ID" ]; then
+            echo "Provisioning profile mismatch. Wanted $APPLE_TEAM_ID.$APP_BUNDLE_ID; received $PROFILE_APP_ID"
+            exit 1
+          fi
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$TEMP/app.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.mobileprovision"
+          echo "PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Archive app
+        run: |
+          xcodebuild archive \
+            -project VTuWAV.xcodeproj \
+            -scheme VTuWAV \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/VTuWAV.xcarchive" \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"
+
+      - name: Export signed IPA
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key><dict>
+              <key>${APP_BUNDLE_ID}</key><string>${PROFILE_NAME}</string>
+            </dict>
+          </dict></plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/VTuWAV.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+          test -s "$RUNNER_TEMP/export/VTuWAV.ipa"
+
+      - name: Upload app to TestFlight
+        uses: apple-actions/upload-testflight-build@v5
+        with:
+          app-path: ${{ runner.temp }}/export/VTuWAV.ipa
+          issuer-id: ${{ vars.APPSTORE_ISSUER_ID }}
+          api-key-id: ${{ vars.APPSTORE_API_KEY_ID }}
+          api-private-key: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+          uses-non-exempt-encryption: 'false'
